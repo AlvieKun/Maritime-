@@ -29,24 +29,53 @@ logger = logging.getLogger(__name__)
 
 def compute_fuel_cost(vessel_df: pd.DataFrame, fuel_cost_table: pd.DataFrame) -> pd.DataFrame:
     """
-    Per methodology: Cost per tonne = Cost_per_GJ × LCV (of main_engine_fuel_type).
-    LCV in MJ/kg is numerically equal to GJ/tonne.
-    Total fuel cost = total fuel consumed (all machineries) × cost per tonne.
+    Per organizer clarification (updated 12:30pm, 2026-02-06) on Step 6a:
+        Fuel costs must be calculated SEPARATELY per machinery fuel type,
+        then summed for total fuel cost.
 
-    NOTE: The methodology prices ALL machinery fuel at the main-engine fuel type rate.
-    This is a stated simplification — we follow the rules exactly.
+        Cost per tonne (machinery) = Cost_per_GJ × LCV  (for THAT machinery's fuel)
+        Total Fuel Cost = Σ( fuel_consumed_by_machinery × cost_per_tonne_for_that_machinery )
+
+    This replaces the original Step 6a which used main_engine_fuel_type for all.
     """
     # Build a lookup: fuel_type → cost per tonne (USD)
     cost_per_tonne = (fuel_cost_table["cost_per_gj"] * fuel_cost_table["lcv"]).to_dict()
 
-    vessel_df["fuel_cost_per_tonne"] = vessel_df["main_engine_fuel_type"].map(cost_per_tonne)
-    vessel_df["fuel_cost"] = vessel_df["fuel_total"] * vessel_df["fuel_cost_per_tonne"]
+    # --- Per-machinery fuel cost (Compliance: organizer clarification Step 6a) ---
+    # Main Engine: priced at main_engine_fuel_type rate
+    vessel_df["fuel_cost_per_tonne_me"] = vessel_df["main_engine_fuel_type"].map(cost_per_tonne)
+    vessel_df["fuel_cost_me"] = vessel_df["fuel_me_total"] * vessel_df["fuel_cost_per_tonne_me"]
 
-    unmapped = vessel_df["fuel_cost_per_tonne"].isna().sum()
-    if unmapped > 0:
-        logger.warning("%d vessels have unmapped fuel cost. Check fuel type names.", unmapped)
+    # Auxiliary Engine: priced at aux_engine_fuel_type rate
+    vessel_df["fuel_cost_per_tonne_ae"] = vessel_df["aux_engine_fuel_type"].map(cost_per_tonne)
+    vessel_df["fuel_cost_ae"] = vessel_df["fuel_ae_total"] * vessel_df["fuel_cost_per_tonne_ae"]
 
-    logger.info("Total fuel cost across fleet: $%.2f M.", vessel_df["fuel_cost"].sum() / 1e6)
+    # Auxiliary Boiler: priced at boil_engine_fuel_type rate
+    vessel_df["fuel_cost_per_tonne_blr"] = vessel_df["boil_engine_fuel_type"].map(cost_per_tonne)
+    vessel_df["fuel_cost_blr"] = vessel_df["fuel_blr_total"] * vessel_df["fuel_cost_per_tonne_blr"]
+
+    # Total fuel cost = sum of per-machinery costs
+    vessel_df["fuel_cost"] = (
+        vessel_df["fuel_cost_me"] + vessel_df["fuel_cost_ae"] + vessel_df["fuel_cost_blr"]
+    )
+
+    # Backward-compat column (now reflects ME rate only, kept for diagnostics)
+    vessel_df["fuel_cost_per_tonne"] = vessel_df["fuel_cost_per_tonne_me"]
+
+    # Validation: flag any unmapped fuel types
+    for col_label, col_name in [("ME", "fuel_cost_per_tonne_me"),
+                                 ("AE", "fuel_cost_per_tonne_ae"),
+                                 ("BLR", "fuel_cost_per_tonne_blr")]:
+        unmapped = vessel_df[col_name].isna().sum()
+        if unmapped > 0:
+            logger.warning("%d vessels have unmapped %s fuel cost. Check fuel type names.",
+                           unmapped, col_label)
+
+    logger.info("Total fuel cost across fleet: $%.2f M (ME=$%.2fM, AE=$%.2fM, BLR=$%.2fM).",
+                vessel_df["fuel_cost"].sum() / 1e6,
+                vessel_df["fuel_cost_me"].sum() / 1e6,
+                vessel_df["fuel_cost_ae"].sum() / 1e6,
+                vessel_df["fuel_cost_blr"].sum() / 1e6)
     return vessel_df
 
 
