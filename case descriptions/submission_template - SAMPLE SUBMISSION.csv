@@ -1,0 +1,16 @@
+﻿Header Name,Data Type,Units,Submission
+team_name,String,-,Team Awesome
+category,String,-,A
+report_file_name,String,-,MaritimeHackathon2026_CasePaper_Team_Awesome.pdf
+sum_of_fleet_deadweight,Float,tonnes,100
+total_cost_of_fleet,Float,dollars,100
+average_fleet_safety_score,Float,-,5
+no_of_unique_main_engine_fuel_types_in_fleet,Integer,-,5
+sensitivity_analysis_performance,String,Yes/No,Yes
+size_of_fleet_count,Integer,-,20
+total_emission_CO2_eq,Float,tonnes,100
+total_fuel_consumption,Float,tonnes,100
+,,,
+,,,
+Notes: ,,,
+"For report_file_name, please include file extensions.",,,

@@ -1,0 +1,12 @@
+﻿Header Name,Data Type,Units,Submission
+team_name,String,-,
+category,String,-,
+report_file_name,String,-,
+sum_of_fleet_deadweight,Float,tonnes,
+total_cost_of_fleet,Float,dollars,
+average_fleet_safety_score,Float,-,
+no_of_unique_main_engine_fuel_types_in_fleet,Integer,-,
+sensitivity_analysis_performance,String,Yes/No,
+size_of_fleet_count,Integer,-,
+total_emission_CO2_eq,Float,tonnes,
+total_fuel_consumption,Float,tonnes,
